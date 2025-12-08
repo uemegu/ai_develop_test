@@ -6,6 +6,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const quotesPath = path.join(__dirname, "..", "docs", "quotes.json");
+const publicQuotesPath = path.join(__dirname, "..", "public", "quotes.json");
 
 function loadQuotes() {
   const json = fs.readFileSync(quotesPath, "utf-8");
@@ -63,52 +64,53 @@ async function generateQuoteWithTwoCalls() {
 
 ${text1}
 
-生成した格言を笑える順に並べてください。そしてその中から3番目の格言を出力してください。
-出力は格言の番号等も含めず、格言だけを出力するようにしてください。
+生成した格言を笑える順に並べてください。その中から3番目の格言を選び、その格言と、その格言に合う架空の作者名をJSON形式で出力してください。
+例: {"text": "石を積む者は、石を積む。", "author": "積田 積"}
 `.trim();
 
   const result2 = await model.generateContent(prompt2);
-  let proverb = result2.response.text().trim();
-
-  // 念のため、番号や「1. 」とかが混ざってたら軽く掃除
-  // - 行頭の数字+ドット/カッコ/スペースを削る
-  proverb = proverb.replace(/^\s*\d+[\.\u3001\)]\s*/, "");
+  let responseText = result2.response.text().trim();
 
   // もし ``` で囲まれて返ってきた場合のガード
-  proverb = proverb
-    .replace(/^```[a-zA-Z]*\s*/m, "")
+  responseText = responseText
+    .replace(/^```json\s*/m, "")
     .replace(/```$/m, "")
     .trim();
 
-  return proverb;
+  try {
+    const parsed = JSON.parse(responseText);
+    if (parsed.text && parsed.author) {
+      return { text: parsed.text, author: parsed.author };
+    }
+  } catch (e) {
+    console.warn("Gemini のレスポンスをJSONとしてパースできなかったよ:", responseText);
+  }
+
+  // JSONパースに失敗した場合のフォールバック
+  // 以前のロジックをベースに格言だけを抽出
+  let proverb = responseText;
+  proverb = proverb.replace(/^\s*\d+[\.\u3001\)]\s*/, "");
+  return { text: proverb, author: "Unknown" };
 }
 
 async function main() {
   const quotes = loadQuotes();
-  const newQuoteText = await generateQuoteWithTwoCalls();
+  const newQuoteData = await generateQuoteWithTwoCalls();
 
-  // quotes.json の形式が
-  //   ["格言1", "格言2", ...]
-  // ならそのまま string を push でOK
-  // もし
-  //   [{ "text": "格言1" }, ...]
-  // みたいなオブジェクト配列なら、必要に応じてここを調整してね。
+  const nextIdNum = quotes.length + 1;
+  const newId = `q-${String(nextIdNum).padStart(3, '0')}`;
 
-  if (
-    quotes.length > 0 &&
-    typeof quotes[0] === "object" &&
-    quotes[0] !== null
-  ) {
-    // オブジェクト形式の場合の雑な例
-    quotes.push({ text: newQuoteText });
-  } else {
-    // 文字列配列の場合
-    quotes.push(newQuoteText);
-  }
+  quotes.push({
+    id: newId,
+    text: newQuoteData.text,
+    author: newQuoteData.author,
+  });
 
   fs.writeFileSync(quotesPath, JSON.stringify(quotes, null, 2) + "\n", "utf-8");
+  fs.writeFileSync(publicQuotesPath, JSON.stringify(quotes, null, 2) + "\n", "utf-8");
 
-  console.log("新しい格言を追加したよ:", newQuoteText);
+  console.log("新しい格言を追加したよ:", newQuoteData.text);
+  console.log("作者:", newQuoteData.author);
 }
 
 main().catch((err) => {
