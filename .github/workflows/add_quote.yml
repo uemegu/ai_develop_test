@@ -2,9 +2,8 @@ name: Add Quote with Gemini
 
 on:
   workflow_dispatch: # 手動実行
-  # 慣れてきたら cron で毎日1回とかもOK
-  # schedule:
-  #   - cron: "0 0 * * *"  # 毎日 00:00 UTC
+  schedule:
+    - cron: "0 8 * 12 *"
 
 permissions:
   contents: write
@@ -36,7 +35,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 変更が無い場合は commit でコケるのでフォロー
-          git add docs/quotes.json
+          git add docs/quotes.json public/quotes.json
           git diff --cached --quiet && echo "No changes to commit" && exit 0
 
           git commit -m "chore: add quote from Gemini"
