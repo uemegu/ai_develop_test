@@ -71,11 +71,19 @@ ${text1}
   const result2 = await model.generateContent(prompt2);
   let responseText = result2.response.text().trim();
 
-  // もし ``` で囲まれて返ってきた場合のガード
-  responseText = responseText
-    .replace(/^```json\s*/m, "")
-    .replace(/```$/m, "")
-    .trim();
+  // 応答テキストからJSONオブジェクトを抽出する
+  const jsonStartIndex = responseText.indexOf('{');
+  const jsonEndIndex = responseText.lastIndexOf('}');
+
+  if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+    responseText = responseText.substring(jsonStartIndex, jsonEndIndex + 1);
+  } else {
+    // JSONが見つからない場合、warnを出して元のresponseTextをそのまま使う（フォールバック）
+    console.warn("Gemini のレスポンスに有効なJSONオブジェクトが見つからなかったよ:", result2.response.text().trim());
+    // フォールバック処理のために元のresponseTextを保持
+    // ただし、以前の ``` ガードは不要になるため削除
+  }
+
 
   try {
     const parsed = JSON.parse(responseText);
