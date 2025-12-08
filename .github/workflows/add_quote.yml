@@ -1,0 +1,46 @@
+name: Add Quote with Gemini
+
+on:
+  workflow_dispatch: # 手動実行
+  # 慣れてきたら cron で毎日1回とかもOK
+  # schedule:
+  #   - cron: "0 0 * * *"  # 毎日 00:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  add-quote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22" # 好きなバージョンでOK
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Add quote using Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npm run add:quote
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 変更が無い場合は commit でコケるのでフォロー
+          git add docs/quotes.json
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+
+          git commit -m "chore: add quote from Gemini"
+
+      - name: Push to main
+        run: |
+          git push origin HEAD:main
