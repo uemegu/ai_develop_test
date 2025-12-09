@@ -3,7 +3,7 @@ name: Add Quote with Gemini
 on:
   workflow_dispatch: # 手動実行
   schedule:
-    - cron: "0 8 * 12 *"
+    - cron: "0 23 * 12 *"
 
 permissions:
   contents: write
