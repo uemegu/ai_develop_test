@@ -30,7 +30,7 @@ async function generateQuoteWithTwoCalls() {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
 
   // ──────────────────────────────
   // ① 5個の格言を生成
@@ -72,18 +72,24 @@ ${text1}
   let responseText = result2.response.text().trim();
 
   // 応答テキストからJSONオブジェクトを抽出する
-  const jsonStartIndex = responseText.indexOf('{');
-  const jsonEndIndex = responseText.lastIndexOf('}');
+  const jsonStartIndex = responseText.indexOf("{");
+  const jsonEndIndex = responseText.lastIndexOf("}");
 
-  if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+  if (
+    jsonStartIndex !== -1 &&
+    jsonEndIndex !== -1 &&
+    jsonEndIndex > jsonStartIndex
+  ) {
     responseText = responseText.substring(jsonStartIndex, jsonEndIndex + 1);
   } else {
     // JSONが見つからない場合、warnを出して元のresponseTextをそのまま使う（フォールバック）
-    console.warn("Gemini のレスポンスに有効なJSONオブジェクトが見つからなかったよ:", result2.response.text().trim());
+    console.warn(
+      "Gemini のレスポンスに有効なJSONオブジェクトが見つからなかったよ:",
+      result2.response.text().trim()
+    );
     // フォールバック処理のために元のresponseTextを保持
     // ただし、以前の ``` ガードは不要になるため削除
   }
-
 
   try {
     const parsed = JSON.parse(responseText);
@@ -91,7 +97,10 @@ ${text1}
       return { text: parsed.text, author: parsed.author };
     }
   } catch (e) {
-    console.warn("Gemini のレスポンスをJSONとしてパースできなかったよ:", responseText);
+    console.warn(
+      "Gemini のレスポンスをJSONとしてパースできなかったよ:",
+      responseText
+    );
   }
 
   // JSONパースに失敗した場合のフォールバック
@@ -106,7 +115,7 @@ async function main() {
   const newQuoteData = await generateQuoteWithTwoCalls();
 
   const nextIdNum = quotes.length + 1;
-  const newId = `q-${String(nextIdNum).padStart(3, '0')}`;
+  const newId = `q-${String(nextIdNum).padStart(3, "0")}`;
 
   quotes.push({
     id: newId,
@@ -115,7 +124,11 @@ async function main() {
   });
 
   fs.writeFileSync(quotesPath, JSON.stringify(quotes, null, 2) + "\n", "utf-8");
-  fs.writeFileSync(publicQuotesPath, JSON.stringify(quotes, null, 2) + "\n", "utf-8");
+  fs.writeFileSync(
+    publicQuotesPath,
+    JSON.stringify(quotes, null, 2) + "\n",
+    "utf-8"
+  );
 
   console.log("新しい格言を追加したよ:", newQuoteData.text);
   console.log("作者:", newQuoteData.author);
